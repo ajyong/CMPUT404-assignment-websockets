@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import flask
-from flask import Flask, request
+from flask import Flask, request, redirect, url_for, make_response
 from flask_sockets import Sockets
 import gevent
 from gevent import queue
@@ -65,11 +65,17 @@ def set_listener( entity, data ):
     ''' do something with the update ! '''
 
 myWorld.add_set_listener( set_listener )
-        
+
+# Make a JSON response from raw data
+def make_json_response(rawData):
+    resp = make_response(json.dumps(rawData))
+    resp.headers['Content-Type'] = 'application/json'
+    return resp
+
 @app.route('/')
 def hello():
     '''Return something coherent here.. perhaps redirect to /static/index.html '''
-    return None
+    return redirect(url_for('static', filename='index.html'))
 
 def read_ws(ws,client):
     '''A greenlet function that reads from the websocket and updates the world'''
@@ -97,23 +103,27 @@ def flask_post_json():
 @app.route("/entity/<entity>", methods=['POST','PUT'])
 def update(entity):
     '''update the entities via this interface'''
-    return None
+    data = flask_post_json(request)
+
+    for key, value in data.iteritems():
+        myWorld.update(entity, key, value);
+
+    return make_json_response(myWorld.get(entity))
 
 @app.route("/world", methods=['POST','GET'])    
 def world():
-    '''you should probably return the world here'''
-    return None
+    return make_json_response(myWorld.world())
 
 @app.route("/entity/<entity>")    
 def get_entity(entity):
     '''This is the GET version of the entity interface, return a representation of the entity'''
-    return None
+    return make_json_response(myWorld.get(entity))
 
 
 @app.route("/clear", methods=['POST','GET'])
 def clear():
-    '''Clear the world out!'''
-    return None
+    myWorld.clear()
+    return make_json_response(myWorld.world())
 
 
 
