@@ -124,6 +124,7 @@ function getPosition(e) {
 function addEntity(entity, data) {
     world[entity] = data;
     //XXX: Send a XHTML Request that updates the entity you just modified!
+    debug(JSON.stringify({entity: data}));
     socket.send(JSON.stringify({entity: data}));
 }
 
