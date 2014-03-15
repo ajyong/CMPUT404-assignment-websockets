@@ -5,7 +5,7 @@
     <meta charset="utf-8" /> 
     <meta content='width=device-width; height=device-height; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;' name='viewport' />
     <meta name="viewport" content="width=device-width" />
-    <meta name="license" content="
+    <meta name="license" content='
         Copyright 2013 Google, Abram Hindle
         
         Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@
         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
         See the License for the specific language governing permissions and
         limitations under the License.
-    "/>
+    '/>
     <script src="json2.js"></script>
   </head> 
   <body bgcolor="white" height="100%" width="100%"> 
@@ -126,9 +126,26 @@ function addEntity(entity, data) {
     drawNextFrame(); // (but should we?)
     //XXX: Send a XHTML Request that updates the entity you just modified!
 }
+
+
+// Rudimentary UID generated using timestamp
+var uniqueId = Date.now().toString();
 var counter = 0;
 function addEntityWithoutName(data) {
-    var name = "X"+(counter++)%100;
+    // Each client limited to 200 entities
+    var name = uniqueId + (counter++) % 200;
+
+    // When a client drags the mouse, each of those circles adopts a different
+    // shade of orange
+    if (!data["colour"]) {
+      var suffix = counter % 100;
+      if (suffix < 10) {
+        data["colour"] = "#FF990" + suffix;
+      } else {
+        data["colour"] = "#FF99" + suffix;
+      }
+    }
+
     addEntity(name,data);
 }
 
@@ -231,16 +248,15 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    addEntityWithoutName({'x':x,'y':y,'colour':'#FF6600','radius':20});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    addEntityWithoutName({'x':x,'y':y,'colour':'#FFFF00','radius':20});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
-                          'radius':10});
+    addEntityWithoutName({'x':x,'y':y,'radius':10});
 });
 
 
