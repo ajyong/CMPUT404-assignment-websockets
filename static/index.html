@@ -27,31 +27,28 @@
     <canvas id="c" width="100%" height="100%" style="-webkit-tap-highlight-color: transparent;"></canvas>
 
     <script>
-      // Fix me
 var canvas = document.getElementById('c');
 var host = window.location.host;
 var context = canvas.getContext("2d");
 var W = canvas.width  = window.innerWidth-6;
 var H = canvas.height = window.innerHeight-50;
-var wscounter = 0;
+var isConnected = false;
 var socket;
 
 function debug(str) {
     var debugDiv = document.getElementById('debug');
     debugDiv.innerHTML = "" + str;
 }
-debug("Test");
+debug("Server messages may pop up here.");
 
 world = {};
 
-//XXX: TODO Make this prettier!
 function drawCircle(context,entity) {
     with(context) {
         beginPath();
         lineWidth = 3;
         var x = entity["x"];
         var y = entity["y"];
-        //moveTo(x,y);
         fillStyle = entity["colour"];
         strokeStyle = fillStyle;
         arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, false);
@@ -122,12 +119,14 @@ function getPosition(e) {
 }
 
 function addEntity(entity, data) {
-    world[entity] = data;
-    //XXX: Send a XHTML Request that updates the entity you just modified!
-    debug(JSON.stringify({entity: data}));
-    socket.send(JSON.stringify({entity: data}));
-}
+    if (isConnected) {
+        var obj = {};
+        obj[entity] = data;
+        world[entity] = data;
 
+        socket.send(JSON.stringify(obj));
+    }
+}
 
 // Rudimentary UID generated using timestamp
 var uniqueId = Date.now().toString();
@@ -188,7 +187,6 @@ mouse = (function() {
                 var y = pos[1];
 	        self.clicked = 1;
                 self.callListeners(self.mousedowners,x,y,self.clicked,e);
-                //addEntityWithoutName({'x':x,'y':y,'colour':'red'});
             }
         },
         mouseup: function(e) {
@@ -202,7 +200,6 @@ mouse = (function() {
 	        self.clicked = 0;
                 self.selected = -1;
                 self.callListeners(self.mouseuppers,x,y,self.clicked,e);
-                //addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
             }
         },
         touchstart: function(e) {
@@ -220,7 +217,6 @@ mouse = (function() {
                 var x = pos[0];
                 var y = pos[1];
 	        if (self.clicked != 0) {
-	            //self.squeakin(x,y);
                     self.callListeners(self.mousedraggers,x,y,self.clicked,e);
 	        }
                 self.callListeners(self.mousemovers,x,y,self.clicked,e);
@@ -231,7 +227,7 @@ mouse = (function() {
             return self.mousemove(e);
 	},
 
-        // Install the mouse listeners
+  // Install the mouse listeners
 	mouseinstall: function() {
             canvas.addEventListener("mousedown",  self.mousedown, false);
             canvas.addEventListener("mousemove",  self.mousemove, false);
@@ -247,7 +243,6 @@ mouse = (function() {
 })();
 
 // Add the application specific mouse listeners!
-//XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
     addEntityWithoutName({'x':x,'y':y,'colour':'#FF6600','radius':20});
 });
@@ -260,48 +255,48 @@ mouse.mousedraggers.push(function(x,y,clicked,e) {
     addEntityWithoutName({'x':x,'y':y,'radius':10});
 });
 
-
-function update() {
-    drawFrame();
-}
-
-
 function wsSetup() {
     var url = "ws://"+host+"/subscribe";
     socket = new WebSocket(url);
     socket.onopen = function() {
-        //XXX: TODO What are you going to do here?
-        socket.send(JSON.parse({}));
+        isConnected = true;
     };
     socket.onerror = function(msg) {
         debug("WebSocket Error:" + msg.data);
     };
     socket.onmessage = function(msg) {
         try {
-            debug("WebSocket Recv:" + msg.data);
-            payload = JSON.parse(msg.data);
-            //XXX: TODO What are you going to do here?
-            for (var name in payload) {
-              if (!(name in world) || world[name] != payload[name]) {
-                addEntity(name, payload[name]);
+            // debug("WebSocket Recv:" + msg.data);
+
+            if (msg.data === "{}") {
+              // Reset the world if the server gives us back empty JSON
+              world = {};
+            } else {
+              var content = JSON.parse(msg.data);
+              for (var name in content) {
+                  world[name] = content[name];
               }
             }
+
             drawNextFrame();
         } catch (e) {
-            alert("socket on message: " + e);
+            debug("onmessage exception: " + e);
         }
+    };
+    socket.onclose = function(e) {
+        isConnected = false;
+        debug("Socket closed.");
     };
 }
 
 wsSetup();
 
-
-
+function update() {
+    drawFrame();
+}
 
 // 30 frames per second
 setInterval( update, 1000/30.0);
-
-
     </script>
 </body>
 </html>

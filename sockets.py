@@ -28,36 +28,46 @@ app.debug = True
 
 class World:
     def __init__(self):
-        self.clear()
+        self.space = dict()
         # we've got listeners now!
-        self.listeners = list()
+        self.set_listeners = list()
+        self.clear_listeners = list()
         
     def add_set_listener(self, listener):
-        self.listeners.append( listener )
+        self.set_listeners.append( listener )
+
+    def add_clear_listener(self, listener):
+        self.clear_listeners.append(listener)
 
     def update(self, entity, key, value):
         entry = self.space.get(entity,dict())
         entry[key] = value
         self.space[entity] = entry
-        self.update_listeners( entity )
+        self.update_set_listeners( entity )
 
     def set(self, entity, data):
         self.space[entity] = data
-        self.update_listeners( entity )
-
-    def update_listeners(self, entity):
-        '''update the set listeners'''
-        for listener in self.listeners:
-            listener(entity, self.get(entity))
+        self.update_set_listeners( entity )
 
     def clear(self):
         self.space = dict()
+        self.update_clear_listeners()
 
     def get(self, entity):
         return self.space.get(entity,dict())
     
     def world(self):
         return self.space
+
+    def update_set_listeners(self, entity):
+        '''update the set listeners'''
+        for listener in self.set_listeners:
+            listener(entity, self.get(entity))
+
+    def update_clear_listeners(self):
+        '''update the clear listeners'''
+        for listener in self.clear_listeners:
+            listener()
 
 myWorld = World()        
 
@@ -74,10 +84,17 @@ class Client:
 clients = list()
 
 def set_listener( entity, data ):
+    # For each client, put the entity and its data in the queue
     for client in clients:
         client.put(json.dumps({entity: data}))
 
+def clear_listener():
+    # For each client, put the empty world in the queue
+    for client in clients:
+        client.put(json.dumps(myWorld.world()))
+
 myWorld.add_set_listener( set_listener )
+myWorld.add_clear_listener( clear_listener )
 
 # Make a JSON response from raw data
 def make_json_response(rawData):
@@ -85,10 +102,11 @@ def make_json_response(rawData):
     resp.headers['Content-Type'] = 'application/json'
     return resp
 
+
 @app.route('/')
 def hello():
-    '''Return something coherent here.. perhaps redirect to /static/index.html '''
     return redirect(url_for('static', filename='index.html'))
+
 
 def read_ws(ws,client):
     '''A greenlet function that reads from the websocket and updates the world'''
@@ -100,36 +118,43 @@ def read_ws(ws,client):
                 packet = json.loads(msg)
                 print "Packet: %s" % packet
 
-                # If we receive an empty packet, give that client the current
-                # world data
-                if len(packet) == 0:
-                    client.put(json.dumps(myWorld.world()))
-                # Otherwise, process the packet data
-                else:
-                    for k, v in packet.iteritems():
-                        myWorld.set(k, v)
+                for name, data in packet.iteritems():
+                    entity = myWorld.get(name)
+
+                    for k, v in data.iteritems():
+                        # Do it this way so we don't call the listener until
+                        # all KV pairs have been updated
+                        entity[k] = v
+
+                    myWorld.set(name, entity)
             else:
                 break
     except:
-        '''Done'''
+        pass
+
     return None
+
 
 @sockets.route('/subscribe')
 def subscribe_socket(ws):
     '''Fufill the websocket URL of /subscribe, every update notify the
        websocket and read updates from the websocket '''
+    print "A client has subscribed."
     client = Client()
     clients.append(client)
+
+    # Give the new client the current world data
+    client.put(json.dumps(myWorld.world()));
+
     g = gevent.spawn( read_ws, ws, client )
-    print "Subscribing"
     try:
         while True:
-            # block here
+            # Block here until we get something from the client's queue
             msg = client.get()
-            print "Got a message!"
+            print "Got a message:\n%s" % msg
             ws.send(msg)
     except Exception as e:# WebSocketError as e:
-        print "WS Error %s" % e
+        print "WS Error: %s" % e
     finally:
         clients.remove(client)
         gevent.kill(g)
@@ -145,6 +170,7 @@ def flask_post_json():
     else:
         return json.loads(request.form.keys()[0])
 
+
 @app.route("/entity/<entity>", methods=['POST','PUT'])
 def update(entity):
     '''update the entities via this interface'''
@@ -155,9 +181,12 @@ def update(entity):
 
     return make_json_response(myWorld.get(entity))
 
+
 @app.route("/world", methods=['POST','GET'])    
 def world():
+    '''Return the world as JSON'''
     return make_json_response(myWorld.world())
+
 
 @app.route("/entity/<entity>")    
 def get_entity(entity):
@@ -168,8 +197,8 @@ def get_entity(entity):
 @app.route("/clear", methods=['POST','GET'])
 def clear():
     myWorld.clear()
+    
     return make_json_response(myWorld.world())
-
 
 
 if __name__ == "__main__":
