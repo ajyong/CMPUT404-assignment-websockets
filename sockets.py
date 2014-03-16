@@ -71,6 +71,7 @@ class World:
 
 myWorld = World()        
 
+# From https://github.com/abramhindle/WebSocketsExamples
 class Client:
     def __init__(self):
         self.queue = queue.Queue()
@@ -108,6 +109,7 @@ def hello():
     return redirect(url_for('static', filename='index.html'))
 
 
+# Boilerplate code from https://github.com/abramhindle/WebSocketsExamples
 def read_ws(ws,client):
     '''A greenlet function that reads from the websocket and updates the world'''
     try:
@@ -135,6 +137,7 @@ def read_ws(ws,client):
     return None
 
 
+# Boilerplate code from https://github.com/abramhindle/WebSocketsExamples
 @sockets.route('/subscribe')
 def subscribe_socket(ws):
     '''Fufill the websocket URL of /subscribe, every update notify the

@@ -14,10 +14,17 @@ pip install flask-sockets
 
 pip install ws4py
 
+Acknowledgements
+================
+
+A lot of the broadcasting boilerplate code was based on Abram Hindle's
+[WebSockets examples.](https://github.com/abramhindle/WebSocketsExamples)
+
 Contributors / Licensing
 ========================
 
-Generally everything is LICENSE'D under the Apache 2 license by Abram Hindle.
+Generally everything is LICENSE'D under the Apache 2 license by Abram Hindle
+and Aaron Yong.
 
 freetests.py is LICENSE'D under a BSD-like license:
 
