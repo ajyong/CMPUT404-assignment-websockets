@@ -160,7 +160,7 @@ def subscribe_socket(ws):
         gevent.kill(g)
 
 
-def flask_post_json():
+def flask_post_json(request):
     '''Ah the joys of frameworks! They do so much work for you
        that they get in the way of sane operation!'''
     if (request.json != None):
