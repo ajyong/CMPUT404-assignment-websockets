@@ -113,10 +113,10 @@ def read_ws(ws,client):
     try:
         while True:
             msg = ws.receive()
-            print "WS RECV: %s" % msg
+            # print "WS RECV: %s" % msg
             if (msg is not None):
                 packet = json.loads(msg)
-                print "Packet: %s" % packet
+                # print "Packet: %s" % packet
 
                 for name, data in packet.iteritems():
                     entity = myWorld.get(name)
@@ -139,7 +139,7 @@ def read_ws(ws,client):
 def subscribe_socket(ws):
     '''Fufill the websocket URL of /subscribe, every update notify the
        websocket and read updates from the websocket '''
-    print "A client has subscribed."
+    # print "A client has subscribed."
     client = Client()
     clients.append(client)
 
@@ -151,7 +151,7 @@ def subscribe_socket(ws):
         while True:
             # Block here until we get something from the client's queue
             msg = client.get()
-            print "Got a message:\n%s" % msg
+            # print "Got a message:\n%s" % msg
             ws.send(msg)
     except Exception as e:# WebSocketError as e:
         print "WS Error: %s" % e
